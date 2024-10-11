@@ -1,0 +1,8 @@
+# custom_dataset.yaml
+
+train: images/train  # path to training images
+val: images/val      # path to validation images
+test: images/test    # path to test images (optional)
+
+nc: 1  # number of classes
+names: ['license']  # list of class names
