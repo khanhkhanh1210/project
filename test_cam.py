@@ -1,10 +1,10 @@
 import cv2
+import matplotlib.pyplot as plt
+import easyocr
 import numpy as np
-from paddleocr import PaddleOCR
 
 from ultralytics import YOLO
 import torch
-# import re
 
 # Global flag to indicate if the loop should exit
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -24,7 +24,6 @@ def binary_convert(image):
     return im_bw
 
 def crop_image(image):
-    crop_image = None
     torch.cuda.set_device(0)
     model = YOLO("license_plate_v8/train/weights/best.pt")
     results = model.predict(image)
@@ -33,7 +32,7 @@ def crop_image(image):
         for i, box in enumerate(boxes):
             x1, y1, x2, y2 = map(int, box)
             cropped_image = image[y1:y2, x1:x2]
-    # cv2.imwrite("crop_im.jpg", cropped_image)
+            # cv2.imwrite("crop_im.jpg", cropped_image)
     return cropped_image
 
 def filter_image(image):
@@ -51,26 +50,26 @@ def filter_image(image):
     highboost_image_uint8 = cv2.normalize(highboost_image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return highboost_image_uint8
 
-def segment_image(image):
-    vertical_hist = np.sum(image, axis=0)
+# def segment_image(image):
+#     vertical_hist = np.sum(image, axis=0)
 
 def main(cameraId):
-    # vid = cv2.VideoCapture(cameraId)
+    vid = cv2.VideoCapture(cameraId)
 
-    # while True:
-    #     _, image = vid.read()
-    #     cv2.imshow("Video Handler", image)
-    #     cv2.moveWindow("Video Handler", 0, 0)
-    #     if cv2.waitKey(1) & 0xFF == ord('\r'):
-    #         # capture(image)
-    #         break
+    while True:
+        _, image = vid.read()
+        cv2.imshow("Video Handler", image)
+        cv2.moveWindow("Video Handler", 0, 0)
+        
+        if cv2.waitKey(1) & 0xFF == ord('\r'):
+            # capture(image)
+            break
 
-    # vid.release()               
-    # cv2.destroyAllWindows()
-
-    image = cv2.imread("plate_1.jpg")
+    vid.release()               
+    cv2.destroyAllWindows()
 
     # Load the trained YOLO model and move it to the GPU
+    cropped_image = None
     cropped_image = crop_image(image)
 
     if cropped_image is not None:
@@ -82,24 +81,13 @@ def main(cameraId):
     # **Apply Highboost Filtering**
     highboost_image_uint8 = filter_image(bi_pic)
 
-    # # Initialize EasyOCR reader
-    # reader = easyocr.Reader(['en'], gpu=(device.type == 'cuda'))  # Use GPU for EasyOCR
+    # Initialize EasyOCR reader
+    reader = easyocr.Reader(['en'], gpu=(device.type == 'cuda'))  # Use GPU for EasyOCR
 
-    # # Perform OCR on the highboost processed image
-    # text_results = reader.readtext(highboost_image_uint8, detail=0)  # Extract text only
-    # print(f'Text extracted from plate image: {text_results}')
+    # Perform OCR on the highboost processed image
+    text_results = reader.readtext(highboost_image_uint8, detail=0)  # Extract text only
+    print(f'Text extracted from plate image: {text_results}')
     
-    ocr = PaddleOCR(use_angle_cls=True, lang="en", use_gpu=True)
-    result = ocr.ocr(cropped_image, cls=True)
-    
-    print(f"License Plate Number: {result[0][1][0]}")
-
-    # #print results in matrix line
-    for line in result:
-        print(line)
-        
-
-
 if __name__ == '__main__':
     cameraId = 0  # Change this to the correct camera ID if needed
     main(cameraId)
